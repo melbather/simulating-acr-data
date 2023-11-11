@@ -1,30 +1,30 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #Function to simulate capture histories when there is inhomogeneous density 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#Density is able to vary based on forest and village locations as well as x and y coordinates and session covariates
 
 #ARGUMENTS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#session_info should be a data frame with one row containing the session ID and covariate information
-#alpha_forest = controls how smooth the field is in terms of forest/non-forest
-#alpha_protected = same as above but for protected/non-protected areas
-#beta0 = intercept term for density
-#beta1 = x-coord coefficient for density
-#mask_locations & detector_locations = self explanatory
-#g0_base = detection probability when animal is at the detector without any interference of session covariates
-#sigma = sigma for probability calculation
+#session_info: should be a data frame with one row containing the session ID and covariate information
+#alpha_forest: controls how smooth the field is in terms of forest/non-forest
+#alpha_protected: same as above but for protected/non-protected areas
+#alpha_protected: same as above but for altitude
+#beta0: intercept term for density
+#beta1: coefficient of x-coordinate for density
+#mask_locations: locations of all mask cells
+#detector_locations: locations of all detectors
+#g0_base: baseline detection probability
+#sigma: sigma for probability calculation
 #x_range/y_range = all possible values for x and y in the survey region
-#beta2 = y-coord coefficient for density
-#beta3 = forest coefficient for density
-#beta4 = distance to nearest village coefficient for density
-#beta5 = coefficient to determine effect of weather on baseline capture probability/g0
-#beta6 = coefficient to account for effect of mountains
-#beta7 = coefficient for protected areas
-#beta8 = coefficient for altitude
-#beta9 = coefficient for time
-#village_locations = x and y coords of villages
-#cp = the concentration parameter which determines accuracy of bearings
-#cp_beta0
-#cp_beta1
+#beta2: coefficient of y-coordinate for density
+#beta3: density coefficient for forest
+#beta4: density coefficient for distance to nearest village
+#beta5: coefficient to determine effect of weather on baseline capture probability/g0
+#beta6: coefficient to account for effect of mountains on baseline capture probability/g0
+#beta7: density coefficient for protected areas
+#beta8: density coefficient for altitude
+#beta9: density coefficient for time
+#village_locations: x and y coordinatess of villages
+#cp_beta0: value for exp(kappa) (concentration parameter)
+#cp_beta1: value to adjust concentration parameter in presence of mountains
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -32,7 +32,7 @@ simulate_capture_histories_with_sessions <- function(session_info, alpha_forest,
                                                      beta0, beta1 = 0, mask_locations, detector_locations, g0_base, 
                                                      sigma, x_range, y_range, beta2 = 0, beta3 = 0, beta4 = 0, 
                                                      beta5 = 0, beta6 = 1, beta7 = 0, beta8 = 0, beta9 = 0,
-                                                     village_locations = NULL, cp, cp_beta0 = 0, cp_beta1 =0) {
+                                                     village_locations = NULL, cp_beta0, cp_beta1 = 0) {
   
   #MASK AREA ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #change location of the mask based on session start location
@@ -85,7 +85,7 @@ simulate_capture_histories_with_sessions <- function(session_info, alpha_forest,
   else if(session_info$weather == "overcast") weather <- 3 * beta5
   else weather <- 4 * beta5
   g0 <-  plogis(qlogis(g0_base) + mountain + weather)
-  
+
   #ANIMAL LOCATIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #Animal locations saved here for future plotting
   animal_locations <- data.frame(matrix(ncol = 2))
@@ -98,7 +98,6 @@ simulate_capture_histories_with_sessions <- function(session_info, alpha_forest,
                                             mask_locations)^2+(village_locations$y - mask_locations)^2))
   } else nearest_village_distance <- 0
 
-  
   #CALCULATE DENSITIES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #Get the densities inside all mask cells
   if(!is.null(village_locations)) {
@@ -149,7 +148,7 @@ simulate_capture_histories_with_sessions <- function(session_info, alpha_forest,
   animal_x <- mask_x + x_displacements
   animal_y <- mask_y + y_displacements
   animal_coords <- cbind(animal_x, animal_y)
-  
+
   #DISTANCES OF ANIMALS FROM DETECTORS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   #find distances of all animals to all the detectors
   distances <- rdist(animal_coords, detector_locations)
@@ -186,13 +185,10 @@ simulate_capture_histories_with_sessions <- function(session_info, alpha_forest,
     left_join(detector_locations, by = c("trap" = "detector_ID"))
   true_bearings <- numeric()
   observed_bearings <- numeric()
-  
+
   #if the session is mountainous, the cp can expect to change
-  if(session_info$terrain == "mountain") {
-    cp_adjusted <- exp(cp_beta0 + cp_beta1*mountain)
-  } else {
-    cp_adjusted <- cp
-  }
+  is_mountain <- ifelse(session_info$terrain == "mountain", 1, 0)
+  cp_adjusted <- exp(cp_beta0 + cp_beta1*is_mountain)
   
   #TODO vectorise this?
   for(i in 1:nrow(all_info_long_capt_hist)) {
