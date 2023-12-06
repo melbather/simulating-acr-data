@@ -3,7 +3,7 @@ generate_session_locations <- function(num_of_sessions, x_dimension,
   
   if(!space_overlap) {
     #min_space = minimum amount of space that needs to separate each session
-    x_range <- (x_dimension + min_space) * num_of_sessions * 3 #randomly multiplying by 3 for now
+    x_range <- (x_dimension + min_space) * num_of_sessions * 3 
     y_range <- (y_dimension + min_space) * num_of_sessions * 3
     
     #partition x and y ranges into squares where sessions can lie without overlapping
