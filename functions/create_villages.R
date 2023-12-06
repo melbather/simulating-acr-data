@@ -4,6 +4,5 @@ create_villages <- function(number, x_range, y_range) {
   names(locations) <- c("x", "y")
   locations$x <- runif(number, min = min(x_range), max = max(x_range))
   locations$y <- runif(number, min = min(y_range), max = max(y_range))
-  #locations$radius <- rnorm(number, expected_radius)
   locations
 }
